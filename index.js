@@ -116,9 +116,25 @@ function randomize(buf) {
     buf[i] = data[i];
   }
 }
-
+function decrypt(key, doc) {
+  if (!key || !doc.nonce) {
+    return doc;
+  }
+  var decipher = chacha.createDecipher(key, new Buffer(doc.nonce, 'hex'));
+  decipher.setAAD(new Buffer(doc._id));
+  decipher.setAuthTag(new Buffer(doc.tag, 'hex'));
+  var out = decipher.update(new Buffer(doc.data, 'hex')).toString();
+  decipher.final();
+  // parse it AFTER calling final
+  // you don't want to parse it if it has been manipulated
+  out = JSON.parse(out);
+  out._id = doc._id;
+  out._rev = doc._rev;
+  return out;
+}
 exports.filter = filter;
 exports.crypto = cryptoInit;
+exports.decrypt = decrypt;
 
 if (typeof window !== 'undefined' && window.PouchDB) {
   window.PouchDB.plugin(module.exports);
